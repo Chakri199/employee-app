@@ -1,0 +1,35 @@
+name: Deploy Employee App to EC2
+
+on:
+  push:
+    branches:
+      - main   # runs when you push to the main branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Add SSH key
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ secrets.EC2_KEY }}
+
+    - name: Deploy to EC2
+      run: |
+        ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+          cd ~/employee-app
+
+          echo "📦 Pulling latest code..."
+          git pull origin main
+
+          echo "🐳 Rebuilding and starting Docker containers..."
+          docker compose down
+          docker compose build --no-cache
+          docker compose up -d
+
+          echo "✅ Deployment complete!"
+        EOF
